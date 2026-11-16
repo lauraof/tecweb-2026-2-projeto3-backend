@@ -21,14 +21,16 @@ Crie um plano de treino usando exclusivamente os dados deste questionário:
 Regras:
 - Crie exatamente um treino para cada dia disponível.
 - Cada treino deve ser identificado somente pelo campo "dia".
-- O campo "dia" deve usar exatamente os valores de "dias_disponiveis".
+- O campo "dia" deve usar exatamente um destes códigos:
+  SEG, TER, QUA, QUI, SEX, SAB ou DOM.
+- SEG representa segunda-feira.
+- TER representa terça-feira.
+- QUA representa quarta-feira.
+- QUI representa quinta-feira.
+- SEX representa sexta-feira.
+- SAB representa sábado.
+- DOM representa domingo.
 - Não crie nomes como "Treino A", "Treino B" ou semelhantes.
-- Não crie nomes para os treinos de cada dia.
-- Respeite o nível de experiência.
-- Respeite a duração informada.
-- Utilize somente os equipamentos informados.
-- Não inclua diagnósticos ou orientações médicas.
-- Retorne somente o plano solicitado.
 """
 
 
@@ -55,9 +57,12 @@ def gerar_treino(questionario: dict) -> PlanoTreinoSchema:
     dias_esperados = set(questionario.get("dias_disponiveis", []))
     dias_retornados = {treino.dia for treino in plano.treinos}
 
-    if dias_retornados != dias_esperados:
+    if (
+        dias_retornados != dias_esperados
+        or len(plano.treinos) != len(dias_esperados)
+    ):
         raise ValueError(
-            "O Gemini não retornou um treino para cada dia disponível."
+            "O Gemini não retornou exatamente um treino para cada dia disponível."
         )
 
     return plano
