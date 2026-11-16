@@ -3,6 +3,14 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from multiselectfield import MultiSelectField
 
+# Regras de gamificação
+XP_POR_ACAO = {
+    "EXERCICIO": 2,
+    "REFEICAO": 3,
+    "HABITO": 4,
+}
+XP_POR_NIVEL = 100
+
 
 class DiasSemana(models.TextChoices):
     SEGUNDA = "SEG", "Segunda-feira"
@@ -30,7 +38,6 @@ class Refeicoes(models.TextChoices):
 class Usuario(models.Model):
     nome = models.CharField(max_length=30, unique=True)
     senha = models.CharField(max_length=255) 
-    nivel = models.PositiveIntegerField(default=1)
     xp = models.PositiveIntegerField(default=0)
     gemas = models.PositiveIntegerField(default=0)
     streak = models.PositiveIntegerField(default=0)
@@ -39,6 +46,14 @@ class Usuario(models.Model):
 
     class Meta:
         ordering = ["-xp", "nome"]
+
+    @property
+    def nivel(self): 
+        return self.xp // XP_POR_NIVEL + 1
+
+    @property
+    def xp_no_nivel(self):
+        return self.xp % XP_POR_NIVEL
 
     def set_senha(self, senha_crua):
         from django.contrib.auth.hashers import make_password
