@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from sistema.models import DiasSemana
+from sistema.models import *
 
 
 class GerarTreinoSerializer(serializers.Serializer):
@@ -69,3 +69,24 @@ class GerarTreinoSerializer(serializers.Serializer):
             )
 
         return dados
+
+class HabitoSerializer(serializers.ModelSerializer):
+    dias_semana = serializers.ListField(child=serializers.ChoiceField(choices=DiasSemana.choices), allow_empty=False, max_length=7)
+
+    class Meta:
+        model = Habito
+        fields = ["id", "nome", "descricao", "dias_semana", "ativo", "criado_em"]
+        read_only_fields = ["id"]
+
+    def validate_dias_semana(self, dias):
+        if len(dias) != len(set(dias)):
+            raise serializers.ValidationError("Há dias repetidos na lista.")
+        ordem = [codigo for codigo, _ in DiasSemana.choices]
+        dias = sorted(dias, key=ordem.index)
+        return dias
+
+    def validate_nome(self, nome):
+        nome = nome.strip()
+        if not nome:
+            raise serializers.ValidationError("O nome do hábito está vazio.")
+        return nome
