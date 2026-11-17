@@ -171,3 +171,62 @@ class DietaSerializer(serializers.ModelSerializer):
                 })
 
         return dados
+
+
+class GrupoSerializer(serializers.ModelSerializer):
+    objetivos = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=ObjetivosGrupo.choices
+        ),
+        allow_empty=False
+    )
+
+    class Meta:
+        model = Grupo
+        fields = [
+            "id",
+            "nome",
+            "objetivos",
+            "duracao_dias",
+            "criado_em",
+        ]
+        read_only_fields = ["id", "criado_em"]
+
+    def validate_nome(self, nome):
+        nome = nome.strip()
+
+        if not nome:
+            raise serializers.ValidationError(
+                "O nome do grupo não pode estar vazio."
+            )
+
+        return nome
+
+    def validate_objetivos(self, objetivos):
+        if len(objetivos) != len(set(objetivos)):
+            raise serializers.ValidationError(
+                "Os objetivos não podem se repetir."
+            )
+
+        return objetivos
+
+    def create(self, validated_data):
+        objetivos = validated_data.pop("objetivos")
+
+        grupo = Grupo.objects.create(
+            objetivos=",".join(objetivos),
+            **validated_data
+        )
+
+        return grupo
+
+    def to_representation(self, instance):
+        dados = super().to_representation(instance)
+
+        dados["objetivos"] = list(instance.objetivos)
+
+        return dados
+
+
+class AdicionarMembroSerializer(serializers.Serializer):
+    usuario_id = serializers.IntegerField(min_value=1)
