@@ -180,7 +180,7 @@ def missoes_diarias_endpoint(request):
             "treino": bloco_treino,
             "habitos": bloco_habitos,
             "refeicoes": bloco_refeicoes,
-        }
+        })
 
     
 @api_view(["GET", "PUT"])
