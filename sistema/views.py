@@ -99,6 +99,13 @@ def habitos_endpoint(request):
 
     if request.method == 'GET':
         habitos = Habito.objects.filter(usuario=usuario)
+        filtro = request.query_params.get('ativo')
+        if filtro == 'true':
+            habitos = habitos.filter(ativo=True)
+        elif filtro == 'false':
+            habitos = habitos.filter(ativo=False)
+        elif filtro is not None:
+            return Response({'erro':'O parâmetro "ativo" aceita apenas true ou false.'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = HabitoSerializer(habitos, many=True)
         return Response(serializer.data)
 

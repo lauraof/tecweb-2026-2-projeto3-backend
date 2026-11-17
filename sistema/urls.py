@@ -10,4 +10,5 @@ urlpatterns = [
     path("dieta/hoje/", views.dieta_hoje_endpoint, name="dieta-hoje"),
     path("dieta/refeicoes/", views.concluir_refeicao_endpoint, name="concluir-refeicao"),
     path("dieta/refeicoes/<int:conclusao_id>/", views.desmarcar_refeicao_endpoint, name="desmarcar-refeicao"),
+    path("habitos/", views.habitos_endpoint, name="habitos"),
 ]
