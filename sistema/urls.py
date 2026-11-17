@@ -7,4 +7,9 @@ urlpatterns = [
     path("habitos/<int:habito_id>/", views.habito_detalhe_endpoint, name="habito-detalhe",),
     path("habitos/", views.habitos_endpoint, name="habito"),
     path("missoes/hoje", views.missoes_diarias_endpoint, name="missoes-diarias"),
+    path("dieta/metas/", views.dieta_metas_endpoint, name="dieta-metas"),
+    path("dieta/hoje/", views.dieta_hoje_endpoint, name="dieta-hoje"),
+    path("dieta/refeicoes/", views.concluir_refeicao_endpoint, name="concluir-refeicao"),
+    path("dieta/refeicoes/<int:conclusao_id>/", views.desmarcar_refeicao_endpoint, name="desmarcar-refeicao"),
+    path("habitos/", views.habitos_endpoint, name="habitos"),
 ]

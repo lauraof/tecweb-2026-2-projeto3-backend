@@ -90,3 +90,84 @@ class HabitoSerializer(serializers.ModelSerializer):
         if not nome:
             raise serializers.ValidationError("O nome do hábito está vazio.")
         return nome
+
+
+class DietaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Dieta
+        fields = [
+            "id",
+            "meta_calorias",
+            "pct_carboidrato",
+            "pct_proteina",
+            "pct_gordura",
+            "pct_cafe",
+            "pct_almoco",
+            "pct_lanche",
+            "pct_jantar",
+        ]
+        read_only_fields = ["id"]
+
+    def validate_meta_calorias(self, value):
+        if value <= 0:
+            raise serializers.ValidationError(
+                "A meta de calorias deve ser maior que zero."
+            )
+        return value
+
+    def validate(self, dados):
+        # Combina os valores enviados com os já existentes.
+        # Isso também permite validar atualizações parciais.
+        valores = {}
+
+        campos = [
+            "pct_carboidrato",
+            "pct_proteina",
+            "pct_gordura",
+            "pct_cafe",
+            "pct_almoco",
+            "pct_lanche",
+            "pct_jantar",
+        ]
+
+        for campo in campos:
+            if campo in dados:
+                valores[campo] = dados[campo]
+            elif self.instance is not None:
+                valores[campo] = getattr(self.instance, campo)
+
+        # Verifica a soma dos macronutrientes
+        macros = [
+            "pct_carboidrato",
+            "pct_proteina",
+            "pct_gordura",
+        ]
+
+        if all(campo in valores for campo in macros):
+            soma_macros = sum(valores[campo] for campo in macros)
+
+            if soma_macros != 100:
+                raise serializers.ValidationError({
+                    "macronutrientes":
+                        "As porcentagens dos macronutrientes devem somar 100%."
+                })
+
+        # Verifica a distribuição entre refeições
+        refeicoes = [
+            "pct_cafe",
+            "pct_almoco",
+            "pct_lanche",
+            "pct_jantar",
+        ]
+
+        if all(campo in valores for campo in refeicoes):
+            soma_refeicoes = sum(valores[campo] for campo in refeicoes)
+
+            if soma_refeicoes != 100:
+                raise serializers.ValidationError({
+                    "refeicoes":
+                        "As porcentagens das refeições devem somar 100%."
+                })
+
+        return dados
