@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from sistema.models import Habito, Usuario, Dieta, Conclusao, Refeicoes, MovXP
+from sistema.models import Habito, Usuario, Dieta, DiasSemana, Conclusao, Acoes, Refeicoes, MovXP, XP_POR_ACAO, GEM_POR_ACAO
 from sistema.serializers import HabitoSerializer, GerarTreinoSerializer, DietaSerializer
 from sistema.services.gemini import gerar_treino
 from sistema.services.treinos import salvar_plano_treino
@@ -115,6 +115,72 @@ def habitos_endpoint(request):
         serializer.save(usuario=usuario)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+@api_view(["GET"])
+def missoes_diarias_endpoint(request):
+    usuario = usuario_atual(request)
+    data = timezone.localdate()
+    codigo_dia = DiasSemana.values[data.weekday()]
+    conclusoes = Conclusao.objects.filter(usuario=usuario, data=data)
+
+    exercicios_feitos = set()
+    habitos_feitos = set()
+    refeicoes_feitas = set()
+
+    for realizados in conclusoes:
+        if realizados.tipo == Acoes.EXERCICIO:
+            exercicios_feitos.add(realizados.exercicio_id)
+        elif realizados.tipo == Acoes.HABITO:
+            habitos_feitos.add(realizados.habito_id)
+        elif realizados.tipo == Acoes.REFEICAO:
+            refeicoes_feitas.add(realizados.refeicao)
+
+    treino = getattr(usuario, "treino", None)
+    bloco_treino = None
+
+    exercicios = []
+    if treino is not None:
+        for exercicio in treino.exercicios.filter(dia=codigo_dia): 
+            exercicios.append({"id": exercicio.id, "nome": exercicio.nome, "series": exercicio.series, "repeticoes": exercicio.repeticoes,
+                    "descanso": exercicio.descanso, "concluido": exercicio.id in exercicios_feitos,
+                })
+
+        if exercicios:
+            bloco_treino = {"nome": treino.nome, "total": len(exercicios), "concluidos": sum(1 for item in exercicios if item["concluido"]),
+                "xp_por_item": XP_POR_ACAO[Acoes.EXERCICIO], "gemas_por_item": GEM_POR_ACAO[Acoes.EXERCICIO], "exercicios": exercicios,
+            }
+
+    habitos = []
+    for habito in Habito.objects.filter(usuario=usuario, ativo=True):
+        if codigo_dia in habito.dias_semana:
+            habitos.append({"id": habito.id, "nome": habito.nome, "concluido": habito.id in habitos_feitos,})
+
+    bloco_habitos = {"total": len(habitos), "concluidos": sum(1 for item in habitos if item["concluido"]), "xp_por_item": XP_POR_ACAO[Acoes.HABITO],
+        "gemas_por_item": GEM_POR_ACAO[Acoes.HABITO], "itens": habitos,
+    }
+
+    dieta = getattr(usuario, "dieta", None)
+    bloco_refeicoes = None
+
+    refeicoes = []
+    if dieta is not None:
+        for codigo, nome in Refeicoes.choices:
+            refeicoes.append({"codigo": codigo, "nome": nome, "calorias": dieta.calorias_da_refeicao(codigo), "concluida": codigo in refeicoes_feitas,
+                })
+        bloco_refeicoes = {
+            "total": len(refeicoes),
+            "concluidos": sum(1 for item in refeicoes if item["concluida"]),
+            "xp_por_item": XP_POR_ACAO[Acoes.REFEICAO],
+            "gemas_por_item": GEM_POR_ACAO[Acoes.REFEICAO],
+            "itens": refeicoes,
+        }
+    return Response(
+        {
+            "data": data,
+            "dia_semana": codigo_dia,
+            "treino": bloco_treino,
+            "habitos": bloco_habitos,
+            "refeicoes": bloco_refeicoes,
+        }
 
     
 @api_view(["GET", "PUT"])

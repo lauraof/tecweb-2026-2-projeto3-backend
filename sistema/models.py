@@ -9,6 +9,11 @@ XP_POR_ACAO = {
     "REFEICAO": 3,
     "HABITO": 4,
 }
+GEM_POR_ACAO = { 
+    "EXERCICIO": 1, 
+    "REFEICAO" : 2, 
+    "HABITO" : 1,
+}
 XP_POR_NIVEL = 100
 
 
