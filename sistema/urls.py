@@ -4,9 +4,6 @@ from sistema import views
 
 
 urlpatterns = [
-    path(
-        "api/treinos/gerar/",
-        views.gerar_treino_endpoint,
-        name="gerar-treino",
-    ),
+    path("treinos/gerar/", views.gerar_treino_endpoint,name="gerar-treino",),
+    path()
 ]
