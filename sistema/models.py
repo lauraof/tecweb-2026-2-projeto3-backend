@@ -205,3 +205,71 @@ class MovXP(models.Model):
     def __str__(self):
         sinal = "+" if self.quantidade >= 0 else ""
         return f"{self.usuario.nome}: {sinal}{self.quantidade} XP ({self.acao})"
+
+
+    
+class ObjetivosGrupo(models.TextChoices):
+    TREINO = "EXERCICIO", "Treino"
+    REFEICOES = "REFEICAO", "Refeições"
+    HABITOS = "HABITO", "Hábitos"
+
+
+class Grupo(models.Model):
+    nome = models.CharField(max_length=100)
+
+    criador = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="grupos_criados"
+    )
+
+    objetivos = MultiSelectField(
+        choices=ObjetivosGrupo.choices,
+        max_length=30
+    )
+
+    duracao_dias = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(365)
+        ],
+        default=30
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    membros = models.ManyToManyField(
+        Usuario,
+        through="ParticipacaoGrupo",
+        related_name="grupos"
+    )
+
+    def __str__(self):
+        return self.nome
+
+
+class ParticipacaoGrupo(models.Model):
+    grupo = models.ForeignKey(
+        Grupo,
+        on_delete=models.CASCADE,
+        related_name="participacoes"
+    )
+
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="participacoes_grupos"
+    )
+
+    entrou_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["grupo", "usuario"],
+                name="participacao_unica_por_grupo"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.usuario.nome} - {self.grupo.nome}"

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from sistema import views
+from sistema import views_grupos
 
 urlpatterns = [
     path("treinos/gerar/", views.gerar_treino_endpoint, name="gerar-treino",),
@@ -12,4 +13,10 @@ urlpatterns = [
     path("dieta/refeicoes/", views.concluir_refeicao_endpoint, name="concluir-refeicao"),
     path("dieta/refeicoes/<int:conclusao_id>/", views.desmarcar_refeicao_endpoint, name="desmarcar-refeicao"),
     path("habitos/", views.habitos_endpoint, name="habitos"),
+    path("grupos/", views_grupos.grupos_endpoint, name="grupos"),
+    path("grupos/<int:grupo_id>/", views_grupos.grupo_detalhe_endpoint, name="grupo-detalhe"),
+    path("grupos/<int:grupo_id>/membros/", views_grupos.adicionar_membro_endpoint, name="grupo-adicionar-membro"),
+    path("grupos/<int:grupo_id>/membros/<int:usuario_id>/", views_grupos.remover_membro_endpoint, name="grupo-remover-membro"),
+    path("grupos/<int:grupo_id>/leaderboard/", views_grupos.leaderboard_grupo_endpoint, name="grupo-leaderboard"),
+    path("grupos/<int:grupo_id>/participacao/", views_grupos.sair_grupo_endpoint, name="grupo-sair"),
 ]
