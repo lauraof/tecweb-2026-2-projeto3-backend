@@ -12,6 +12,9 @@ from sistema.models import Habito, Usuario, Dieta, DiasSemana, Conclusao, Acoes,
 from sistema.serializers import HabitoSerializer, GerarTreinoSerializer, DietaSerializer
 from sistema.services.gemini import gerar_treino
 from sistema.services.treinos import salvar_plano_treino
+from django.core.exceptions import ValidationError as DjangoValidationError
+from sistema.services.conclusoes import registrar_conclusao
+from sistema.models import Exercicio
 
 def usuario_atual(request):
     return Usuario.objects.get(id=request.headers.get("X-Usuario-Id"))
@@ -21,6 +24,96 @@ DISCLAIMER = (
     "caráter informativo. Consulte um profissional de educação física "
     "ou de saúde antes de iniciar ou modificar sua rotina de exercícios."
 )
+
+@api_view(["POST"])
+def concluir_exercicio_endpoint(request, exercicio_id):
+    usuario = usuario_atual(request)
+
+    exercicio = get_object_or_404(
+        Exercicio,
+        id=exercicio_id,
+        treino__usuario=usuario,
+    )
+
+    try:
+        resultado = registrar_conclusao(
+            usuario=usuario,
+            tipo=Acoes.EXERCICIO,
+            exercicio=exercicio,
+        )
+    except DjangoValidationError as erro:
+        return Response(
+            {
+                "erro": erro.messages,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    conclusao = resultado["conclusao"]
+
+    return Response(
+        {
+            "id": conclusao.id,
+            "tipo": conclusao.tipo,
+            "exercicio_id": exercicio.id,
+            "data": conclusao.data,
+            "concluida": True,
+            "nova_conclusao": resultado["criada"],
+            "xp_ganho": resultado["xp_ganho"],
+            "xp_total": resultado["xp_total"],
+            "nivel": resultado["nivel"],
+        },
+        status=(
+            status.HTTP_201_CREATED
+            if resultado["criada"]
+            else status.HTTP_200_OK
+        ),
+    )
+
+@api_view(["POST"])
+def concluir_habito_endpoint(request, habito_id):
+    usuario = usuario_atual(request)
+
+    habito = get_object_or_404(
+        Habito,
+        id=habito_id,
+        usuario=usuario,
+    )
+
+    try:
+        resultado = registrar_conclusao(
+            usuario=usuario,
+            tipo=Acoes.HABITO,
+            habito=habito,
+        )
+    except DjangoValidationError as erro:
+        return Response(
+            {
+                "erro": erro.messages,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    conclusao = resultado["conclusao"]
+
+    return Response(
+        {
+            "id": conclusao.id,
+            "tipo": conclusao.tipo,
+            "habito_id": habito.id,
+            "data": conclusao.data,
+            "concluida": True,
+            "nova_conclusao": resultado["criada"],
+            "xp_ganho": resultado["xp_ganho"],
+            "xp_total": resultado["xp_total"],
+            "nivel": resultado["nivel"],
+        },
+        status=(
+            status.HTTP_201_CREATED
+            if resultado["criada"]
+            else status.HTTP_200_OK
+        ),
+    )
 
 
 @api_view(["POST"])
@@ -313,61 +406,52 @@ def dieta_hoje_endpoint(request):
 @transaction.atomic
 def concluir_refeicao_endpoint(request):
     usuario = usuario_atual(request)
-
-    if not Dieta.objects.filter(usuario=usuario).exists():
-        return Response(
-            {"erro": "Configure suas metas antes de concluir refeições."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     codigo = request.data.get("refeicao")
-    codigos_validos = [opcao[0] for opcao in Refeicoes.choices]
 
-    if codigo not in codigos_validos:
-        return Response(
-            {"erro": "Refeição inválida."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    hoje = timezone.localdate()
-
-    # Impede operações concorrentes sobre o saldo do usuário
-    usuario = Usuario.objects.select_for_update().get(pk=usuario.pk)
-
-    conclusao, criada = Conclusao.objects.get_or_create(
-        usuario=usuario,
-        tipo="REFEICAO",
-        data=hoje,
-        refeicao=codigo
-    )
-
-    # Só concede recompensas se a conclusão for nova
-    if criada:
-        Usuario.objects.filter(pk=usuario.pk).update(
-            xp=F("xp") + 3,
-            gemas=F("gemas") + 3
-        )
-
-        MovXP.objects.create(
+    try:
+        resultado = registrar_conclusao(
             usuario=usuario,
-            quantidade=3,
-            acao="REFEICAO",
-            conclusao=conclusao
+            tipo=Acoes.REFEICAO,
+            refeicao=codigo,
+        )
+    except DjangoValidationError as erro:
+        return Response(
+            {
+                "erro": erro.messages,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    conclusao = resultado["conclusao"]
+
+    gemas_ganhas = 0
+
+    if resultado["criada"]:
+        # Mantém a regra que já existia antes desta issue.
+        gemas_ganhas = 3
+
+        Usuario.objects.filter(pk=usuario.pk).update(
+            gemas=F("gemas") + gemas_ganhas
         )
 
     return Response(
         {
             "id": conclusao.id,
+            "tipo": conclusao.tipo,
             "refeicao": codigo,
+            "data": conclusao.data,
             "concluida": True,
-            "xp_ganho": 3 if criada else 0,
-            "gemas_ganhas": 3 if criada else 0,
+            "nova_conclusao": resultado["criada"],
+            "xp_ganho": resultado["xp_ganho"],
+            "xp_total": resultado["xp_total"],
+            "nivel": resultado["nivel"],
+            "gemas_ganhas": gemas_ganhas,
         },
         status=(
             status.HTTP_201_CREATED
-            if criada
+            if resultado["criada"]
             else status.HTTP_200_OK
-        )
+        ),
     )
 
 
@@ -382,7 +466,7 @@ def desmarcar_refeicao_endpoint(request, conclusao_id):
         Conclusao,
         id=conclusao_id,
         usuario=usuario,
-        tipo="REFEICAO",
+        tipo=Acoes.REFEICAO,
         data=timezone.localdate()
     )
 
@@ -391,7 +475,7 @@ def desmarcar_refeicao_endpoint(request, conclusao_id):
         movimento.quantidade
         for movimento in MovXP.objects.filter(
             conclusao=conclusao,
-            acao="REFEICAO"
+            acao=Acoes.REFEICAO
         )
     )
 
@@ -403,7 +487,7 @@ def desmarcar_refeicao_endpoint(request, conclusao_id):
     # Exclui o histórico de XP associado à conclusão
     MovXP.objects.filter(
         conclusao=conclusao,
-        acao="REFEICAO"
+        acao=Acoes.REFEICAO
     ).delete()
 
     conclusao.delete()
