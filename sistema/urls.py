@@ -19,4 +19,6 @@ urlpatterns = [
     path("grupos/<int:grupo_id>/membros/<int:usuario_id>/", views_grupos.remover_membro_endpoint, name="grupo-remover-membro"),
     path("grupos/<int:grupo_id>/leaderboard/", views_grupos.leaderboard_grupo_endpoint, name="grupo-leaderboard"),
     path("grupos/<int:grupo_id>/participacao/", views_grupos.sair_grupo_endpoint, name="grupo-sair"),
+    path("habitos/<int:habito_id>/concluir/", views.concluir_habito_endpoint, name="concluir-habito"),
+    path("exercicios/<int:exercicio_id>/concluir/", views.concluir_exercicio_endpoint, name="concluir-exercicio"),
 ]

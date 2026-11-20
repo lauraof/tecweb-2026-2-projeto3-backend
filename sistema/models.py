@@ -18,6 +18,7 @@ GEM_POR_ACAO = {
 XP_POR_NIVEL = 100
 
 
+
 class DiasSemana(models.TextChoices):
     SEGUNDA = "SEG", "Segunda-feira"
     TERCA = "TER", "Terça-feira"
@@ -215,6 +216,13 @@ class MovXP(models.Model):
 
     class Meta:
         ordering = ["-criado_em"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conclusao"],
+                condition=models.Q(conclusao__isnull=False),
+                name="mov_xp_unica_por_conclusao",
+            ),
+        ]
 
     def __str__(self):
         sinal = "+" if self.quantidade >= 0 else ""
