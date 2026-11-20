@@ -2,6 +2,7 @@ from django.urls import path
 
 from sistema import views
 from sistema import views_grupos
+from sistema import views_auth
 
 urlpatterns = [
     path("treinos/gerar/", views.gerar_treino_endpoint, name="gerar-treino",),
@@ -21,4 +22,5 @@ urlpatterns = [
     path("grupos/<int:grupo_id>/participacao/", views_grupos.sair_grupo_endpoint, name="grupo-sair"),
     path("habitos/<int:habito_id>/concluir/", views.concluir_habito_endpoint, name="concluir-habito"),
     path("exercicios/<int:exercicio_id>/concluir/", views.concluir_exercicio_endpoint, name="concluir-exercicio"),
+    path("auth/cadastro/", views_auth.cadastro_endpoint, name='auth-cadastro'),
 ]
