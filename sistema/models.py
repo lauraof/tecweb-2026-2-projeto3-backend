@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from multiselectfield import MultiSelectField
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # Regras de gamificação
 XP_POR_ACAO = {
@@ -40,15 +41,36 @@ class Refeicoes(models.TextChoices):
     LANCHE = "LANCHE", "Lanche"
     JANTAR = "JANTAR", "Jantar"
 
+class UsuarioManager(BaseUserManager):
+    def create_user(self, nome, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("É necessário um email válido.")
+        if not nome:
+            raise ValueError("É necessário um nome de usuário.")
+        email = self.normalize_email(email)
+        usuario = self.model(nome=nome, email=email, **extra_fields)
+        usuario.set_password(password)
+        usuario.save(using=self._db)
+        return usuario
+    
+    def create_superuser(self, nome, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(nome, email, password, **extra_fields)
 
-class Usuario(models.Model):
+class Usuario(AbstractBaseUser, PermissionsMixin):
     nome = models.CharField(max_length=30, unique=True)
-    senha = models.CharField(max_length=255) 
     xp = models.PositiveIntegerField(default=0)
     gemas = models.PositiveIntegerField(default=0)
     streak = models.PositiveIntegerField(default=0)
     ultima_atividade = models.DateField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    objects = UsuarioManager()
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['nome']
 
     class Meta:
         ordering = ["-xp", "nome"]
@@ -60,14 +82,6 @@ class Usuario(models.Model):
     @property
     def xp_no_nivel(self):
         return self.xp % XP_POR_NIVEL
-
-    def set_senha(self, senha_crua):
-        from django.contrib.auth.hashers import make_password
-        self.senha = make_password(senha_crua)
-
-    def checar_senha(self, senha_crua):
-        from django.contrib.auth.hashers import check_password
-        return check_password(senha_crua, self.senha)
 
     def __str__(self):
         return self.nome

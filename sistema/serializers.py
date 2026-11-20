@@ -1,7 +1,7 @@
 from rest_framework import serializers
-
+from django.contrib.auth.password_validation import validate_password as validar_senha
 from sistema.models import *
-
+from django.core.exceptions import ValidationError
 
 class GerarTreinoSerializer(serializers.Serializer):
     usuario_id = serializers.IntegerField(min_value=1)
@@ -230,3 +230,32 @@ class GrupoSerializer(serializers.ModelSerializer):
 
 class AdicionarMembroSerializer(serializers.Serializer):
     usuario_id = serializers.IntegerField(min_value=1)
+
+
+class CadastroSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    class Meta:
+        model = Usuario
+        fields = ['id', 'nome', 'email', 'password']
+    
+    def validate_email(self, value):
+        if Usuario.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Já existe uma conta com esse e-mail.")
+        return value
+
+    def validate_password(self, value):
+        try:
+            validar_senha(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value 
+
+    def create(self, validated_data):
+        return Usuario.objects.create_user(**validated_data)
+
+class UsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = ['id', 'nome', 'email', 'xp', 'gemas', 'streak', 'nivel', 'xp_no_nivel']
+        read_only_fields = fields
+    
