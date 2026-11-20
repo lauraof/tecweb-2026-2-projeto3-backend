@@ -252,4 +252,10 @@ class CadastroSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Usuario.objects.create_user(**validated_data)
+
+class UsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = ['id', 'nome', 'email', 'xp', 'gemas', 'streak', 'nivel', 'xp_no_nivel']
+        read_only_fields = fields
     
